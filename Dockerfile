@@ -4,45 +4,28 @@ FROM golang:1.21-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache gcc musl-dev
+RUN apk add --no-cache gcc musl-dev git
 
-# Install swag
-RUN go install github.com/swaggo/swag/cmd/swag@latest
-
-# Copy go mod file
-COPY go.mod ./
-
-# Download dependencies and generate go.sum
-RUN go mod download && \
-    go get -u github.com/swaggo/swag/cmd/swag && \
-    go get -u github.com/swaggo/echo-swagger && \
-    go get -u github.com/KyleBanks/depth && \
-    go get -u github.com/go-openapi/jsonpointer && \
-    go get -u github.com/go-openapi/jsonreference && \
-    go get -u github.com/go-openapi/spec && \
-    go get -u github.com/go-openapi/swag && \
-    go get github.com/skip2/go-qrcode && \
-    go get go.mongodb.org/mongo-driver/bson && \
-    go get go.mongodb.org/mongo-driver/mongo && \
-    go get go.mongodb.org/mongo-driver/mongo/options && \
-    go mod tidy
-
-# Copy source code
+# Copy entire project
 COPY . .
 
-# Generate Swagger docs
-RUN swag init
+# Install swag and generate docs
+RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+    swag init
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
+# Download dependencies and build
+RUN go mod download && \
+    go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
 
 # Final stage
 FROM alpine:latest
 
 WORKDIR /app
 
-# Copy the binary from builder
+# Copy the binary and swagger docs from builder
 COPY --from=builder /app/app .
+COPY --from=builder /app/api/docs ./api/docs
 
 # Expose port
 EXPOSE 8080

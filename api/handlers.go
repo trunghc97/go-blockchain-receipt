@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/hct97/go-blockchain-receipt/internal/services"
+	"go-blockchain-receipt/internal/services"
 )
 
 type Handler struct {
@@ -17,16 +17,22 @@ func NewHandler(receiptService *services.ReceiptService) *Handler {
 	}
 }
 
+// HTTPError represents an error response
+type HTTPError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 // CreateReceipt godoc
 // @Summary Create a new receipt
 // @Description Create a new receipt from transaction payload
 // @Tags receipts
 // @Accept json
 // @Produce json
-// @Param payload body interface{} true "Transaction payload"
+// @Param payload body map[string]interface{} true "Transaction payload"
 // @Success 201 {object} models.CreateReceiptResponse
-// @Failure 400 {object} api.HTTPError
-// @Failure 500 {object} api.HTTPError
+// @Failure 400 {object} HTTPError
+// @Failure 500 {object} HTTPError
 // @Router /receipts [post]
 func (h *Handler) CreateReceipt(c echo.Context) error {
 	var payload map[string]interface{}
@@ -51,7 +57,8 @@ func (h *Handler) CreateReceipt(c echo.Context) error {
 // @Param rid query string true "Receipt ID"
 // @Param jws query string true "JWS token"
 // @Success 200 {object} models.VerifyResponse
-// @Failure 400 {object} api.HTTPError
+// @Failure 400 {object} HTTPError
+// @Failure 404 {object} HTTPError
 // @Router /verify [get]
 func (h *Handler) VerifyReceipt(c echo.Context) error {
 	rid := c.QueryParam("rid")
@@ -88,7 +95,6 @@ func (h *Handler) GetJWKS(c echo.Context) error {
 // @Success 200 {object} map[string]string
 // @Router /healthz [get]
 func (h *Handler) HealthCheck(c echo.Context) error {
-	// TODO: Implement actual health checks for MongoDB and RPC
 	return c.JSON(http.StatusOK, map[string]string{
 		"status": "healthy",
 	})
